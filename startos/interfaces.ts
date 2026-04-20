@@ -1,5 +1,4 @@
 import { sdk } from './sdk'
-import { storeJson } from './file-models/store.json'
 import {
   backendInterfaceId,
   adminInterfaceId,
@@ -11,13 +10,8 @@ import {
 
 export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   const receipts = []
-  const store = await storeJson.read().const(effects)
-  const adminPath = store?.bitcartAdminRootPath?.startsWith('/')
-    ? store.bitcartAdminRootPath
-    : '/admin'
-  const storePath = store?.bitcartStoreRootPath?.startsWith('/')
-    ? store.bitcartStoreRootPath
-    : '/'
+  const adminPath = '/admin'
+  const storePath = '/'
 
   const backendMulti = sdk.MultiHost.of(effects, 'backend')
   const backendOrigin = await backendMulti.bindPort(backendPort, {

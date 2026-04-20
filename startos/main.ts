@@ -9,22 +9,11 @@ import {
   databasePort,
   backendInterfaceId,
   asString,
-  asBoolString,
-  normalizePath,
 } from './utils'
 
 export const main = sdk.setupMain(async ({ effects }) => {
   const store = (await storeJson.read().const(effects)) ?? {
-    bitcartAdminRootPath: '/admin',
-    bitcartStoreRootPath: '/',
-    oneDomainMode: true,
-    bchServer: '',
-    bchOneServer: true,
     bitcartCryptos: 'btc,bch,eth,bnb,matic,trx,xrg,ltc,grs,xmr',
-    bitcartApiWorkers: '',
-    bitcartPrometheusMetricsEnabled: false,
-    cashTokenDefaults: ['MUSD'],
-    cashTokenCategoryIds: ['b38a33f750f84c5c169a6f23cb873e6e79605021585d4f3408789689ed87f366'],
   }
 
   // Auto-detect LAN hostname from the backend service interface.
@@ -118,9 +107,6 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'database',
   )
 
-  const adminRootPath = normalizePath(store.bitcartAdminRootPath, '/admin')
-  const storeRootPath = normalizePath(store.bitcartStoreRootPath, '/')
-
   const commonBitcartEnv = {
     BITCART_ENV: 'production',
     LOG_FILE: 'bitcart.log',
@@ -133,17 +119,15 @@ export const main = sdk.setupMain(async ({ effects }) => {
     BITCART_DOCKER_PLUGINS_DIR: '/plugins/docker',
     BITCART_HOST: bitcartHost,
     BITCART_ADMIN_HOST: '',
-    BITCART_ADMIN_ROOTPATH: adminRootPath,
-    BITCART_STORE_ROOTPATH: storeRootPath,
-    ONE_DOMAIN_MODE: asBoolString(store.oneDomainMode, true),
+    BITCART_ADMIN_ROOTPATH: '/admin',
+    BITCART_STORE_ROOTPATH: '/',
+    ONE_DOMAIN_MODE: 'true',
     BITCART_CRYPTOS: asString(store.bitcartCryptos, 'btc,bch,eth,bnb,matic,trx,xrg,ltc,grs,xmr'),
     BCH_NETWORK: 'mainnet',
-    BCH_SERVER: asString(store.bchServer, 'https://seed-server.bitcart.ai'),
-    BCH_ONESERVER: asBoolString(store.bchOneServer, true),
-    BITCART_PROMETHEUS_METRICS_ENABLED: asBoolString(store.bitcartPrometheusMetricsEnabled, false),
+    BCH_SERVER: 'https://seed-server.bitcart.ai',
+    BCH_ONESERVER: 'true',
+    BITCART_PROMETHEUS_METRICS_ENABLED: 'false',
   }
-
-  const apiWorkers = asString(store.bitcartApiWorkers)
 
   return sdk.Daemons.of(effects)
     .addDaemon('database', {
@@ -196,7 +180,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
           BITCART_HTTPS_ENABLED: 'false',
           BITCART_ADMIN_API_URL: adminApiUrl,
           BITCART_STORE_API_URL: storeApiUrl,
-          BITCART_API_WORKERS: apiWorkers,
+          BITCART_API_WORKERS: '',
         },
       },
       ready: {
@@ -237,10 +221,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
         env: {
           BITCART_ADMIN_LOG_FILE: 'bitcart.log',
           BITCART_ADMIN_API_URL: adminApiUrl,
-          BITCART_ADMIN_ROOTPATH: adminRootPath,
+          BITCART_ADMIN_ROOTPATH: '/admin',
           BITCART_STORE_HOST: '',
-          BITCART_STORE_ROOTPATH: storeRootPath,
-          ONE_DOMAIN_MODE: asBoolString(store.oneDomainMode, true),
+          BITCART_STORE_ROOTPATH: '/',
+          ONE_DOMAIN_MODE: 'true',
           BITCART_ADMIN_SERVER_API_URL: 'http://127.0.0.1:8000',
         },
       },
@@ -260,10 +244,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
         command: ['sh', '-lc', 'exec yarn start'],
         env: {
           BITCART_STORE_API_URL: storeApiUrl,
-          BITCART_STORE_ROOTPATH: storeRootPath,
+          BITCART_STORE_ROOTPATH: '/',
           BITCART_ADMIN_HOST: '',
-          BITCART_ADMIN_ROOTPATH: adminRootPath,
-          ONE_DOMAIN_MODE: asBoolString(store.oneDomainMode, true),
+          BITCART_ADMIN_ROOTPATH: '/admin',
+          ONE_DOMAIN_MODE: 'true',
           BITCART_STORE_SERVER_API_URL: 'http://127.0.0.1:8000',
         },
       },
