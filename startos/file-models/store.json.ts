@@ -3,11 +3,6 @@ import { sdk } from '../sdk'
 
 export const shape = z
   .object({
-    bitcartHost: z.string().catch(''),
-    bitcartAdminHost: z.string().catch(''),
-    bitcartStoreHost: z.string().catch(''),
-    bitcartAdminApiUrl: z.string().catch(''),
-    bitcartStoreApiUrl: z.string().catch(''),
     bitcartAdminRootPath: z.string().catch('/admin'),
     bitcartStoreRootPath: z.string().catch('/'),
     oneDomainMode: z.boolean().catch(true),
@@ -17,7 +12,7 @@ export const shape = z
     bitcartApiWorkers: z.string().catch(''),
     bitcartPrometheusMetricsEnabled: z.boolean().catch(false),
     cashTokenDefaults: z.array(z.string()).catch(['MUSD']),
-    cashTokenCategoryIds: z.array(z.string()).catch([]),
+    cashTokenCategoryIds: z.array(z.string()).catch(['b38a33f750f84c5c169a6f23cb873e6e79605021585d4f3408789689ed87f366']),
   })
   .strip()
 

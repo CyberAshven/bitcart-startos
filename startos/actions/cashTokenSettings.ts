@@ -3,27 +3,15 @@ import { storeJson } from '../file-models/store.json'
 
 const { InputSpec, Value, List } = sdk
 
+export const MUSD_CATEGORY_ID = 'b38a33f750f84c5c169a6f23cb873e6e79605021585d4f3408789689ed87f366'
+
 const spec = InputSpec.of({
-  cashTokenDefaults: Value.list(
-    List.text(
-      {
-        name: 'Default CashTokens',
-        description: 'Default token tickers enabled in the store.',
-        default: ['MUSD'],
-        minLength: 1,
-        maxLength: null,
-      },
-      {
-        masked: false,
-        placeholder: 'MUSD',
-      },
-    ),
-  ),
   cashTokenCategoryIds: Value.list(
     List.text(
       {
-        name: 'Merchant CashToken Category IDs',
-        description: 'Additional CashTokens category IDs to add to catalog/search.',
+        name: 'Additional CashToken Category IDs',
+        description:
+          `BCMR-standard BCH CashToken category IDs to add to merchant catalog. MUSD (${MUSD_CATEGORY_ID}) is always enabled by default. Add any other token category IDs here.`,
         default: [],
         minLength: null,
         maxLength: null,
@@ -40,7 +28,7 @@ export const cashTokenSettings = sdk.Action.withInput(
   'cashtoken-settings',
   async () => ({
     name: 'CashTokens Settings',
-    description: 'Set default CashTokens and add merchant category IDs (MUSD enabled by default).',
+    description: `Configure BCH CashToken category IDs for the merchant store. MUSD is always enabled by default (category ID: ${MUSD_CATEGORY_ID}). Additional tokens must be configured in the Bitcart admin panel using their BCMR category IDs.`,
     warning: null,
     allowedStatuses: 'any',
     group: 'Configuration',
@@ -49,15 +37,16 @@ export const cashTokenSettings = sdk.Action.withInput(
   spec,
   async () => {
     const store = await storeJson.read().once()
-    return {
-      cashTokenDefaults: (store?.cashTokenDefaults ?? ['MUSD']).filter(Boolean),
-      cashTokenCategoryIds: (store?.cashTokenCategoryIds ?? []).filter(Boolean),
-    }
+    const existing = (store?.cashTokenCategoryIds ?? []).filter(
+      (id) => id !== MUSD_CATEGORY_ID,
+    )
+    return { cashTokenCategoryIds: existing }
   },
   async ({ effects, input }) => {
+    const extra = (input.cashTokenCategoryIds ?? []).filter(Boolean)
     await storeJson.merge(effects, {
-      cashTokenDefaults: (input.cashTokenDefaults ?? ['MUSD']).filter(Boolean),
-      cashTokenCategoryIds: (input.cashTokenCategoryIds ?? []).filter(Boolean),
+      cashTokenDefaults: ['MUSD'],
+      cashTokenCategoryIds: [MUSD_CATEGORY_ID, ...extra],
     })
     return null
   },

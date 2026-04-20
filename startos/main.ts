@@ -7,6 +7,7 @@ import {
   storePort,
   redisPort,
   databasePort,
+  backendInterfaceId,
   asString,
   asBoolString,
   normalizePath,
@@ -14,22 +15,28 @@ import {
 
 export const main = sdk.setupMain(async ({ effects }) => {
   const store = (await storeJson.read().const(effects)) ?? {
-    bitcartHost: '',
-    bitcartAdminHost: '',
-    bitcartStoreHost: '',
-    bitcartAdminApiUrl: '',
-    bitcartStoreApiUrl: '',
     bitcartAdminRootPath: '/admin',
     bitcartStoreRootPath: '/',
     oneDomainMode: true,
-    bchServer: 'https://seed-server.bitcart.ai',
+    bchServer: '',
     bchOneServer: true,
     bitcartCryptos: 'btc,bch,eth,bnb,matic,trx,xrg,ltc,grs,xmr',
     bitcartApiWorkers: '',
     bitcartPrometheusMetricsEnabled: false,
     cashTokenDefaults: ['MUSD'],
-    cashTokenCategoryIds: [],
+    cashTokenCategoryIds: ['b38a33f750f84c5c169a6f23cb873e6e79605021585d4f3408789689ed87f366'],
   }
+
+  // Auto-detect LAN hostname from the backend service interface.
+  // Prefers private IPv4; falls back to any non-local address; falls back to 127.0.0.1.
+  const backendIface = await sdk.serviceInterface.getOwn(effects, backendInterfaceId).once()
+  const lanUrl =
+    backendIface?.addressInfo?.filter({ visibility: 'private', kind: 'ipv4' }).format()[0] ??
+    backendIface?.addressInfo?.nonLocal.format()[0] ??
+    null
+  const bitcartHost = lanUrl ? new URL(lanUrl).hostname : '127.0.0.1'
+  const adminApiUrl = lanUrl ?? `http://127.0.0.1:${backendPort}/api`
+  const storeApiUrl = adminApiUrl
 
   const dataMounts = sdk.Mounts.of().mountVolume({
     volumeId: 'main',
@@ -111,13 +118,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'database',
   )
 
-  const bitcartHost = asString(store.bitcartHost)
-  const adminHost = asString(store.bitcartAdminHost)
-  const storeHost = asString(store.bitcartStoreHost)
   const adminRootPath = normalizePath(store.bitcartAdminRootPath, '/admin')
   const storeRootPath = normalizePath(store.bitcartStoreRootPath, '/')
-  const adminApiUrl = asString(store.bitcartAdminApiUrl, `https://${bitcartHost}/api`)
-  const storeApiUrl = asString(store.bitcartStoreApiUrl, `https://${bitcartHost}/api`)
 
   const commonBitcartEnv = {
     BITCART_ENV: 'production',
@@ -130,7 +132,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
     BITCART_STORE_PLUGINS_DIR: '/plugins/store',
     BITCART_DOCKER_PLUGINS_DIR: '/plugins/docker',
     BITCART_HOST: bitcartHost,
-    BITCART_ADMIN_HOST: adminHost,
+    BITCART_ADMIN_HOST: '',
     BITCART_ADMIN_ROOTPATH: adminRootPath,
     BITCART_STORE_ROOTPATH: storeRootPath,
     ONE_DOMAIN_MODE: asBoolString(store.oneDomainMode, true),
@@ -182,12 +184,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
     .addDaemon('backend', {
       subcontainer: backendSub,
       exec: {
-        command: ['sh', '-lc', 'exec just prod-api-up'],
+        command: ['sh', '-lc', 'cd /app && PATH=/app/.venv/bin:$PATH exec /app/.venv/bin/just prod-api-up'],
         env: {
           ...commonBitcartEnv,
-          DB_HOST: 'database',
+          DB_HOST: '127.0.0.1',
           DB_PORT: `${databasePort}`,
-          REDIS_HOST: 'redis',
+          REDIS_HOST: '127.0.0.1',
           REDIS_PORT: `${redisPort}`,
           BITCART_BACKEND_ROOTPATH: '/api',
           BITCART_REVERSEPROXY: 'nginx-https',
@@ -210,12 +212,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
     .addDaemon('worker', {
       subcontainer: workerSub,
       exec: {
-        command: ['sh', '-lc', 'exec just worker'],
+        command: ['sh', '-lc', 'cd /app && PATH=/app/.venv/bin:$PATH exec /app/.venv/bin/just worker'],
         env: {
           ...commonBitcartEnv,
-          DB_HOST: 'database',
+          DB_HOST: '127.0.0.1',
           DB_PORT: `${databasePort}`,
-          REDIS_HOST: 'redis',
+          REDIS_HOST: '127.0.0.1',
           REDIS_PORT: `${redisPort}`,
         },
       },
@@ -236,10 +238,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
           BITCART_ADMIN_LOG_FILE: 'bitcart.log',
           BITCART_ADMIN_API_URL: adminApiUrl,
           BITCART_ADMIN_ROOTPATH: adminRootPath,
-          BITCART_STORE_HOST: storeHost,
+          BITCART_STORE_HOST: '',
           BITCART_STORE_ROOTPATH: storeRootPath,
           ONE_DOMAIN_MODE: asBoolString(store.oneDomainMode, true),
-          BITCART_ADMIN_SERVER_API_URL: 'http://backend:8000',
+          BITCART_ADMIN_SERVER_API_URL: 'http://127.0.0.1:8000',
         },
       },
       ready: {
@@ -259,10 +261,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
         env: {
           BITCART_STORE_API_URL: storeApiUrl,
           BITCART_STORE_ROOTPATH: storeRootPath,
-          BITCART_ADMIN_HOST: adminHost,
+          BITCART_ADMIN_HOST: '',
           BITCART_ADMIN_ROOTPATH: adminRootPath,
           ONE_DOMAIN_MODE: asBoolString(store.oneDomainMode, true),
-          BITCART_STORE_SERVER_API_URL: 'http://backend:8000',
+          BITCART_STORE_SERVER_API_URL: 'http://127.0.0.1:8000',
         },
       },
       ready: {
